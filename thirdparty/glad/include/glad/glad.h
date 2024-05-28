@@ -669,6 +669,8 @@ struct gladGLversionStruct {
     int minor;
 };
 
+#define GLM_ENABLE_EXPERIMENTAL
+
 typedef void* (* GLADloadproc)(const char *name);
 
 #ifndef GLAPI

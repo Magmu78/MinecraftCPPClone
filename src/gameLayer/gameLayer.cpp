@@ -10,14 +10,24 @@
 #include "imfilebrowser.h"
 #include <gl2d/gl2d.h>
 #include <platformTools.h>
+#include <Shader.h>
+#include <Camera.h>
 
 struct GameData
 {
 	glm::vec2 rectPos = {100,100};
 
-}gameData;
+} gameData;
 
 gl2d::Renderer2D renderer;
+gl2d::Texture grassTex;
+gl2d::Font font;
+
+Shader shaderProgram;
+Camera camera;
+
+int width = 0;
+int height = 0;
 
 bool initGame()
 {
@@ -27,16 +37,20 @@ bool initGame()
 
 	//loading the saved data. Loading an entire structure like this makes savind game data very easy.
 	platform::readEntireFile(RESOURCES_PATH "gameData.data", &gameData, sizeof(GameData));
+	grassTex.loadFromFile(RESOURCES_PATH "test.jpg", true);
+	font.createFromFile(RESOURCES_PATH "roboto_black.ttf");
+	shaderProgram.CreateFromFile(RESOURCES_PATH "default.vert", RESOURCES_PATH "default.frag");
+
+	width = platform::getFrameBufferSizeX(); //window w
+	height = platform::getFrameBufferSizeY(); //window h
+
+	camera.SetupCamera(width, height, glm::vec3(0.0f, 2.0f, 0.0f), 0.005f, 0.02f);
+
+	// Enable depth test
+	glEnable(GL_DEPTH_TEST);
 
 	return true;
 }
-
-
-//IMPORTANT NOTICE, IF YOU WANT TO SHIP THE GAME TO ANOTHER PC READ THE README.MD IN THE GITHUB
-//https://github.com/meemknight/cmakeSetup
-//OR THE INSTRUCTION IN THE CMAKE FILE.
-//YOU HAVE TO CHANGE A FLAG IN THE CMAKE SO THAT RESOURCES_PATH POINTS TO RELATIVE PATHS
-//BECAUSE OF SOME CMAKE PROGBLMS, RESOURCES_PATH IS SET TO BE ABSOLUTE DURING PRODUCTION FOR MAKING IT EASIER.
 
 bool gameLogic(float deltaTime)
 {
@@ -46,35 +60,38 @@ bool gameLogic(float deltaTime)
 	h = platform::getFrameBufferSizeY(); //window h
 	
 	glViewport(0, 0, w, h);
-	glClear(GL_COLOR_BUFFER_BIT); //clear screen
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); //clear screen
 
 	renderer.updateWindowMetrics(w, h);
 #pragma endregion
 
 
-	if (platform::isButtonHeld(platform::Button::Left))
+	if (platform::isButtonHeld(platform::Button::A))
 	{
 		gameData.rectPos.x -= deltaTime * 100;
 	}
-	if (platform::isButtonHeld(platform::Button::Right))
+	if (platform::isButtonHeld(platform::Button::D))
 	{
 		gameData.rectPos.x += deltaTime * 100;
 	}
-	if (platform::isButtonHeld(platform::Button::Up))
+	if (platform::isButtonHeld(platform::Button::W))
 	{
 		gameData.rectPos.y -= deltaTime * 100;
 	}
-	if (platform::isButtonHeld(platform::Button::Down))
+	if (platform::isButtonHeld(platform::Button::S))
 	{
 		gameData.rectPos.y += deltaTime * 100;
 	}
 
-	gameData.rectPos = glm::clamp(gameData.rectPos, glm::vec2{0,0}, glm::vec2{w - 100,h - 100});
-	renderer.renderRectangle({gameData.rectPos, 100, 100}, Colors_Blue);
+	gameData.rectPos = glm::clamp(gameData.rectPos, glm::vec2{0,0}, glm::vec2{w - 100, h - 100});
+	//renderer.renderText(glm::vec2(w / 2, h / 2), "blyat cyka", font, { 1.0f, 1.0f, 1.0f, 1.0f });
+	renderer.renderRectangle({gameData.rectPos, 100, 100}, grassTex);
 
+	shaderProgram.Activate();
+
+	camera.UpdateMatrix(45.0f, 0.01f, 100.0f);
 
 	renderer.flush();
-
 
 	//ImGui::ShowDemoWindow();
 	ImGui::Begin("Test Imgui");
@@ -94,5 +111,7 @@ void closeGame()
 
 	//saved the data.
 	platform::writeEntireFile(RESOURCES_PATH "gameData.data", &gameData, sizeof(GameData));
+
+	shaderProgram.Delete();
 
 }
